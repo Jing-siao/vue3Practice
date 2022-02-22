@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>元件章節作業</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="images/favicon.ico" rel="shortcut icon">
+  <meta charset="UTF-8">
+  <script src="/javascripts/vendor.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.0.2/vue.global.js"></script>
+</head>
+
+<body class="bg-lighter">
+  <div class="container main my-5">
+    <div class="row">
+      <main class="col post">
+        <!-- 章節標題 -->
+        <div class="mb-4">
+          <h1 class="mt-0 text-muted">元件章節作業</h1><small>檔名：<code>component_final.html</code></small>
+        </div>
+        <!-- 🔥🔥練習開始🔥🔥 -->
+        <div id="app">
+          <h3>作業條件：</h3>
+          <ol>
+            <li>將以下範例改為 Vue 的版本</li>
+            <li>卡片、分頁要製作成 “元件”</li>
+            <li>分頁要善用 props 及 emits 的觀念</li>
+          </ol>
+
+          <div class="row" id="content">
+            <card :items="perPageData"></card>
+          </div>
+          <div class="d-flex justify-content-center mt-4">
+            <nav aria-label="Page navigation example">
+              <ul class="pagination" id="pageid">
+                <pagination :all-page="totalPage" @now-page="nowPage"></pagination>
+              </ul>
+            </nav>
+          </div>
+        </div>
+
+        <style>
+          .img-cover {
+            object-fit: cover;
+          }
+        </style>
+
+        <script type="module">
+
+          // API 說明：https://api.kcg.gov.tw/ServiceList/Detail/9c8e1450-e833-499c-8320-29b36b7ace5c
+          // API 路徑：https://api.kcg.gov.tw/api/service/Get/9c8e1450-e833-499c-8320-29b36b7ace5c
+          // 備用 API：https://raw.githubusercontent.com/hexschool/KCGTravel/master/datastore_search.json
+          const app = Vue.createApp({
+            data() {
+              return {
+                data: [],
+                perPage: 20,
+                totalPage: 0,
+                minData: 1,
+                maxData: 20,
+                perPageData: [],
+              }
+            },
+            methods: {
+              getData() {
+                const jsonUrl = 'https://api.kcg.gov.tw/api/service/Get/9c8e1450-e833-499c-8320-29b36b7ace5c';
+                axios.get(jsonUrl).then((res) => {
+                  this.data = res.data.data.XML_Head.Infos.Info;
+                  this.allPages();
+                  this.pageData();
+
+                })
+              },
+              allPages() {
+                this.totalPage = Math.ceil(this.data.length / 20)
+              },
+              nowPage(page) {
+                this.minData = (page - 1) * this.perPage + 1;
+                this.maxData = page * this.perPage;
+                this.perPageData = [];
+                this.pageData();
+              },
+              pageData() {
+                this.data.forEach((item, index) => {
+                  // 獲取陣列索引，但因為索引是從 0 開始所以要 +1。
+                  const num = index + 1;
+                  // 這邊判斷式會稍微複雜一點
+                  // 當 num 比 minData 大且又小於 maxData 就push進去新陣列。
+                  if (num >= this.minData && num <= this.maxData) {
+                    return this.perPageData.push(item);
+                  }
+                });
+
+              },
+            },
+            created() {
+              this.getData();
+            },
+
+          });
+          app.component('card', {
+            data() {
+              return {
+              }
+            },
+            props: ['items'],
+            template: `
+            <div class="col-md-6 py-2" v-for="(item,index) in items" :key="item.Name">
+              <div class="card">
+                <div class="card bg-dark text-white text-left">
+                  <img class="card-img-top img-cover" height="155" :src="item.Picture1">
+                  <div class="card-img-overlay d-flex justify-content-between align-items-end p-0 px-3" style="background-color: rgba(0, 0, 0, .2)">
+                    <h5 class="card-img-title-lg">{{item.Name}}</h5><h5 class="card-img-title-sm">{{item.Zone}}</h5>
+                  </div>
+                </div>
+                <div class="card-body text-left">
+                    <p class="card-text"><i class="far fa-clock fa-clock-time"></i>&nbsp;{{item.Opentime}}</p>
+                    <p class="card-text"><i class="fas fa-map-marker-alt fa-map-gps"></i>&nbsp;{{item.Add}}</p>
+                    <p class="card-text"><i class="fas fa-mobile-alt fa-mobile"></i>&nbsp;{{item.Tel}}</p>
+                  <div>
+                    <p class="card-text" v-if="item.Ticketinfo"><i class="fas fa-tags text-warning"></i>&nbsp;{{item.Ticketinfo}}</p>
+                  </div>
+                </div>
+              </div>
+            </div>`
+          });
+          app.component('pagination', {
+            data() {
+              return {
+                nowPage: 1,
+              }
+            },
+            props: {
+              allPage: {
+                type: Number,
+              }
+
+            },
+            emits: ['nowPage'],
+            methods: {
+              currentPage(page) {
+                page > this.allPage ?
+                  this.nowPage === this.allPage :
+                  page < 1 ?
+                    this.nowPage = 1 :
+                    this.nowPage = page;
+                this.$emit('nowPage', this.nowPage);
+              }
+            },
+            template: `
+            <li class="page-item" :class="{disabled: nowPage === 1}">
+              <a class="page-link" href="#" @click.prevent="currentPage(nowPage - 1)">Previous</a>
+            </li>
+            <li class="page-item" :class="{active: nowPage === n}" v-for="n in allPage" :key="n" @click.prevent="currentPage(n)">
+              <a class="page-link" href="#">{{n}}</a>
+            </li>
+            <li class="page-item" :class="{disabled: nowPage === allPage}">
+              <a class="page-link" href="#" @click.prevent="currentPage(nowPage + 1)">Next</a>
+            </li>
+            `,
+          });
+          app.mount('#app');
+
+        </script>
+
+        <!-- 🙇🙇練習結束🙇🙇 -->
+      </main>
+
+      <aside class="col-md-3">
+        <div class="sticky-top" style="top: 76px">
+          <div class="list-group">
+
+            <a href="/components/component_register.html" class="list-group-item list-group-item-action
+        
+        ">
+              元件註冊
+            </a>
+
+            <a href="/components/component_template.html" class="list-group-item list-group-item-action
+        
+        ">
+              元件樣板及綁定方式
+            </a>
+
+            <a href="/components/component_props.html" class="list-group-item list-group-item-action
+        
+        ">
+              Props
+            </a>
+
+            <a href="/components/component_props_type.html" class="list-group-item list-group-item-action
+        
+        ">
+              Props 型別與驗證
+            </a>
+
+            <a href="/components/component_emits.html" class="list-group-item list-group-item-action
+        
+        ">
+              Emit 傳遞事件
+            </a>
+
+            <a href="/components/component_emits_api.html" class="list-group-item list-group-item-action
+        
+        ">
+              Emits 驗證
+            </a>
+
+            <a href="/components/component_slot.html" class="list-group-item list-group-item-action
+        
+        ">
+              元件插巢
+            </a>
+
+            <a href="/components/component_slot_props.html" class="list-group-item list-group-item-action
+        
+        ">
+              元件插巢 Props
+            </a>
+
+            <a href="/components/component_mitt.html" class="list-group-item list-group-item-action
+        
+        ">
+              跨元件溝通
+            </a>
+
+            <a href="/components/component_final.html" class="list-group-item list-group-item-action
+        
+        active">
+              元件章節作業
+            </a>
+
+          </div>
+          <div class="mt-3 text-end p-2 bg-light rounded">
+            <small class="text-black-50 fw-light mb-0">文件版本：2021/4/09</small>
+          </div>
+        </div>
+
+      </aside>
+
+    </div>
+  </div>
+
+  <nav class="navbar fixed-top navbar-expand-sm navbar-dark bg-secondary">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/">Vue 3 練習手冊</a>
+      <div class="collapse navbar-collapse" id="navbarCollapse">
+        <ul class="navbar-nav">
+          <li class="nav-item active">
+            <a class="nav-link " href="/es6/shorthand.html">JS 必備觀念</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link " href="/intro/createApp.html">認識 Vue.js</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link " href="/template/v-text.html">模板</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link " href="/optionsApi/options-methods.html">方法</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" href="/components/component_register.html">元件</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link " href="/advApi/adv-refs.html">進階</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link " href="/router/vue-router.html">路由</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <footer class="footer py-2 bg-light">
+    <div class="container text-center">
+      <small class="text-black-50 fw-light mb-0">六角學院 Vue 課程專屬文件</small>
+    </div>
+  </footer>
+  <link rel="stylesheet" href="/stylesheets/all.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+</body>
+
+</html>
